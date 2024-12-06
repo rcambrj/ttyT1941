@@ -1,0 +1,12 @@
+# direnv
+.direnv/
+
+# nix
+result
+result-*
+
+# python
+bin
+lib
+lib64
+pyvenv.cfg
