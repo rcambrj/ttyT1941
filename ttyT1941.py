@@ -34,21 +34,21 @@
 # Raspberry Pi:
 # -------------
 #
-# If you connect the brake directly to Raspi's GPIO 14 and GPIO 15 (that is Pin 8 (Tx) and Pin 10 (Rx)) 
+# If you connect the brake directly to Raspi's GPIO 14 and GPIO 15 (that is Pin 8 (Tx) and Pin 10 (Rx))
 # do no forget to make the UART accessable via /dev/ttyAMA0 by adding:
 #     enable_uart=1
 #
 # on Raspi 3 B (or B+) or Raspi Zero W use /dev/ttyS0 (not /dev/ttyUSB0). Be warned: the Mini-UART on the
-# Raspi W Zero is limited and the error rate increase with a high command rate. 
+# Raspi W Zero is limited and the error rate increase with a high command rate.
 # So, if you do not need on-board Bluetooth switch it off with
 #     dtoverlay=pi3-disable-bt
-# to enable the standard UART under /dev/ttyAMA0. 
+# to enable the standard UART under /dev/ttyAMA0.
 # If you need Bluetooth on the Raspi, I recommend to use an additional USB2TTL adapter instead of the
 # Mini-UART.
 #
 # to your /boot/config.txt. I recommend to first test the serial with a simple loopback test before
 # you connect the brake just to make sure the you talk to the serial via /dev/ttyAMA0.
-# Calling "./ttyT1941.py -d /dev/ttyAMA0" (in loopback) should print something like 
+# Calling "./ttyT1941.py -d /dev/ttyAMA0" (in loopback) should print something like
 #   Using /dev/ttyAMA0
 #   bytearray(b'\x02\x00\x00\x00')
 #   bytearray(b'\x02\x00\x00\x00')
@@ -82,15 +82,15 @@
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #
 # Just wire USB/TTL-GND to RJ12-Pin 2 (black, GND), USB/TTL-Tx to RJ12-Pin 3 (Red, Host-Tx, Brake Rx) and USB/TTL-Rx to RJ12-Pin 6 (blue, Host-Rx, Brake Tx).
-# On Raspi GND is Pin 6, Tx is Pin 8 and Rx is Pin 10. 
+# On Raspi GND is Pin 6, Tx is Pin 8 and Rx is Pin 10.
 #
 # Because I did not want to cut my original cable, I bought a new 6p6c RJ12 cable (1$) a CH341 USB to TTL adapter (1$).
 # You can solder the pins or connected 'Dupont' sockets to the cable (< 1$) if you have a crimp tool.
 #
-# From 'Makeblock' there is a cable with a RJ12/RJ25 (6p6c) socket on one side an Dupont sockets on the other side. 
-# Price is about 2$-3$ for a bundle with two cables. 
-# The cable is only 20cm long, but with a full connected female-female 6p6c adapter, you can use the original 
-# cable in addition. The Makeblock part no. is MB14230. They even use the same wire colors as the original cable. 
+# From 'Makeblock' there is a cable with a RJ12/RJ25 (6p6c) socket on one side an Dupont sockets on the other side.
+# Price is about 2$-3$ for a bundle with two cables.
+# The cable is only 20cm long, but with a full connected female-female 6p6c adapter, you can use the original
+# cable in addition. The Makeblock part no. is MB14230. They even use the same wire colors as the original cable.
 
 #
 # The command- and answer-frames all look like: "4-bytes-header" | Message-Data | "2-bytes-checksum"
@@ -245,14 +245,13 @@ def unmarshal(buffer):
         return buf
 
     chk = checksum1(buffer[1:-5])
-
     try:
         chkBuf  = hex2bin(buffer[-5])<<4
         chkBuf += hex2bin(buffer[-4])<<0
         chkBuf += hex2bin(buffer[-3])<<12
         chkBuf += hex2bin(buffer[-2])<<8
 
-        #print('checksum  calc:{:4x} and buf:{:4x}'.format(chk, chkBuf))
+        print('checksum  calc:{:4x} and buf:{:4x}'.format(chk, chkBuf))
         if chk != chkBuf:
             print('checksum error {:4x} != {:4x}'.format(chk, chkBuf))
             return buf
@@ -260,8 +259,9 @@ def unmarshal(buffer):
         for i in range(1,len(buffer)-5,2):
             buf.append( (hex2bin(buffer[i])<<4)+hex2bin(buffer[i+1]) )
 
-    except HexValueError:
-        # typically caused by a transfer error of received data - probably 
+    except HexValueError as err:
+        print(err)
+        # typically caused by a transfer error of received data - probably
         # in the 4 byte checksum. The other case (a corrupted frame with
         # a valid checksum) is unlikely (but can happen, too)
         return bytearray()
@@ -269,11 +269,10 @@ def unmarshal(buffer):
     return buf
 
 
-#port = serial.Serial(device, baudrate=19200, timeout=0.1, parity = serial.PARITY_NONE , bytesize = serial.EIGHTBITS, stopbits = serial.STOPBITS_ONE, xonxoff = False , rtscts = False, dsrdtr = False )
 def main():
     parser = argparse.ArgumentParser(description='Demonstrator to show the serial communication between a host and the Tacx T1941 motor brake')
     parser.add_argument('-d','--device', help='The serial device to use for communication.', required=False, default="/dev/ttyUSB0")
-    
+
     parser.add_argument('-c','--calibrate', help='Switch to calibration mode', action='store_true', default=False)
     parser.add_argument('-ct','--calibrateTime', help='duration of calibration run', required=False, default=50)
     #parser.add_argument('-e','--ergo',      help='Switch to ergo (Power) mode', action='store_true', default=True)
@@ -286,11 +285,12 @@ def main():
 
     if args.calibrate and args.slope:
         print("'Calibrate'- and 'Slope'-mode mutually exclude each other." )
-        exit(1)        
+        exit(1)
 
-    port = serial.Serial(args.device, baudrate=19200, timeout=0.1)
+    port = serial.Serial(args.device, baudrate=19200, timeout=0.1, parity = serial.PARITY_NONE , bytesize = serial.EIGHTBITS, stopbits = serial.STOPBITS_ONE, xonxoff = False , rtscts = False, dsrdtr = False )
+    # port = serial.Serial(args.device, baudrate=19200, timeout=0.1)
     port.read_all()   # just in case - to delete remaining data in input buffers
-        
+
     selectedWatt     = 150.0
     selectedSlope    =  0.0
     selectedSpeed    = 20.0  # calibrate mode with 20 km/h
@@ -304,10 +304,10 @@ def main():
 
     scale_calibrate = 130
     calibrate_value =  0.0         # calibrate_value range -8.0 ... 8.0
-    calibrate = int(scale_calibrate * (calibrate_value + 8.0)) # default x0410 = 8*130 = 1040 
+    calibrate = int(scale_calibrate * (calibrate_value + 8.0)) # default x0410 = 8*130 = 1040
 
     # The 'magic' scale factor: Raw_Load = Target_Power * 128866 / Raw_Speed
-    power2load_magic   = 128866 
+    power2load_magic   = 128866
 
     waitForSerial = True
     cadSensor = 0
@@ -318,24 +318,26 @@ def main():
 
     cmds_per_second = 5   # max is < 20 with 50ms timeout
 
-    # Standard brake commands have 30 symbols and standard brake 
-    # answers have 52 symbols. One symbol needs 10 bits (with 8N1) 
-    # With 19200 baud, sending and receiving takes about 40ms, but 
+    # Standard brake commands have 30 symbols and standard brake
+    # answers have 52 symbols. One symbol needs 10 bits (with 8N1)
+    # With 19200 baud, sending and receiving takes about 40ms, but
     # with values less then 70ms, brake sometimes loses a frame
-    port.timeout = 0.070 
+    port.timeout = 0.070
 
     try:
         while True:
 
             nextCMD = None
 
-            timeStart = datetime.now() 
+            timeStart = datetime.now()
 
             if waitForSerial:
+                print('=> sending version request')
                 #triggerErrorCMD = bytes([0x01])
                 nextCMD  = bytes([0x02,0x00,0x00,0x00])
 
             elif args.calibrate:
+                print('=> sending calibration')
                 if calibrate_timer == 0 and mode == 0:
                     print(
                         "\u001b[31;1mWatch out: Brake accelerates the wheel to 20 km/h.\n\n"
@@ -363,6 +365,7 @@ def main():
                 nextCMD   = bytes([0x01,0x08,0x01,0x00, load & 0xff, load >> 8, 0, 0x00, mode, 0x52, 0, 0 ])
 
             elif args.slope:
+                print('=> sending slope')
                 load     = int( (selectedSlope + slopeOffset)*slopeScale )
                 if load > 32500:
                     load = 32500
@@ -376,6 +379,7 @@ def main():
                 nextCMD   = bytes([0x01,0x08,0x01,0x00, load & 0xff, load >> 8, cadecho, 0x00, mode, weight, calibrate & 0xff, calibrate >> 8 ])
 
             else:
+                print('=> sending status')
                 load = 0
                 if wheel > 0:
                     load     = int(selectedWatt * power2load_magic / wheel)
@@ -390,11 +394,9 @@ def main():
             answerRaw     = port.read(64)
             answerDecoded = unmarshal(answerRaw)
 
-            #print(answerRaw)
-            #print("R:"+' '.join(format(x, '02x') for x in answerRaw))
-            #print("D:"+' '.join(format(x, '02x') for x in answerDecoded))
 
             if len(answerDecoded) >= 23 and answerDecoded[24-24] == 0x03 and answerDecoded[25-24] == 19 and answerDecoded[26-24] == 2 and answerDecoded[27-24] == 0:
+                print("<= received status")
                 wheel                   = answerDecoded[32-24] | (answerDecoded[33-24]<<8)
                 cadence                 = answerDecoded[44-24]
                 cadSensor               = answerDecoded[42-24]
@@ -416,7 +418,7 @@ def main():
                             wheel, speed, currentResistance, useCalibration, useCalibration))
                     else:
                         print('.', end='', flush=True)
-                        
+
                 else:
                     currentWatt = int(currentResistance * wheel / power2load_magic)
                     currentWattAvg = int(currentResistanceAvg * wheel / power2load_magic)
@@ -426,14 +428,16 @@ def main():
                         'CAD=\u001b[32;1m{:3d}\u001b[0m, CadSensor={:1d}, '
                         'U3435={:5d} ForceAvg={:5d}, Force={:5d}, '
                         'LoadEcho={:5d} Load={:5d}'.format(
-                        distance, currentWatt, currentWattAvg, wheel, speed, cadence, cadSensor, 
+                        distance, currentWatt, currentWattAvg, wheel, speed, cadence, cadSensor,
                         unknown34_35, currentResistanceAvg, currentResistance, desiredLoad, load ))
 
-            elif (len(answerDecoded) >= 16 
-                    and answerDecoded[24-24] == 0x03 
-                    and answerDecoded[25-24] == 12 
-                    and answerDecoded[26-24] == 0 
+            elif (len(answerDecoded) >= 16
+                    and answerDecoded[24-24] == 0x03
+                    and answerDecoded[25-24] == 12
+                    and answerDecoded[26-24] == 0
                     and answerDecoded[27-24] == 0):
+
+                print("<= received version")
 
                 serialNr    = answerDecoded[32-24] | (answerDecoded[33-24] << 8) | (answerDecoded[34-24] << 16) | (answerDecoded[35-24] << 24)
                 year        = serialNr // 100000 % 100
@@ -451,11 +455,15 @@ def main():
 
                 waitForSerial = False
             else:
-                print(answerDecoded)
+                print("<= received unknown")
+                print(answerRaw)
+                print("R:"+' '.join(format(x, '02x') for x in answerRaw))
+                print("D:"+' '.join(format(x, '02x') for x in answerDecoded))
+
 
             delta = timeStart + timedelta(seconds=1/cmds_per_second) - datetime.now()
             if delta.total_seconds() >= 0:
-                sleep(delta.microseconds / 1000000)  
+                sleep(delta.microseconds / 1000000)
             else:
                 print("OVERRUN: reduce commands per second!")
 
