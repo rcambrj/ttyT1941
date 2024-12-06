@@ -205,33 +205,26 @@ def checksum1(buffer):
     for a in buffer:
         tmp = a ^ (shiftreg & 0xff)
         shiftreg >>= 8
-
         if parity16(tmp):
             shiftreg ^= poly
-
         tmp ^= tmp<<1
         shiftreg ^= tmp << 6
-
     return shiftreg
 
 
 def marshal(buffer):
     buf = bytearray()
-
     for b in buffer:
         buf.append(bin2hex((b>>4)&0xf))
         buf.append(bin2hex((b>>0)&0xf))
-
     chk = checksum1(buf)
     buf.append(bin2hex((chk>>4)&0xf))
     buf.append(bin2hex((chk>>0)&0xf))
     chk >>= 8
     buf.append(bin2hex((chk>>4)&0xf))
     buf.append(bin2hex((chk>>0)&0xf))
-
     buf.insert(0, startOfFrame)
     buf.append(endOfFrame)
-
     return buf
 
 def unmarshal(buffer):
@@ -316,7 +309,7 @@ def main():
     calibrate_timer = 0
     calibrate_total = int(args.calibrateTime)   # default 50 seconds
 
-    cmds_per_second = 5   # max is < 20 with 50ms timeout
+    cmds_per_second = 1   # max is < 20 with 50ms timeout
 
     # Standard brake commands have 30 symbols and standard brake
     # answers have 52 symbols. One symbol needs 10 bits (with 8N1)
@@ -389,10 +382,15 @@ def main():
                 nextCMD   = bytes([0x01,0x08,0x01,0x00, load & 0xff, load >> 8, cadecho, 0x00, mode, weight, calibrate & 0xff, calibrate >> 8 ])
 
             if nextCMD:
-                port.write(marshal(nextCMD))
+                cmd = marshal(nextCMD)
+                print('=> D: '+' '.join(format(x, '02x') for x in nextCMD))
+                print('=> R: '+' '.join(format(x, '02x') for x in cmd))
+                port.write(cmd)
 
             answerRaw     = port.read(64)
             answerDecoded = unmarshal(answerRaw)
+            print("R: "+' '.join(format(x, '02x') for x in answerRaw))
+            print("D: "+' '.join(format(x, '02x') for x in answerDecoded))
 
 
             if len(answerDecoded) >= 23 and answerDecoded[24-24] == 0x03 and answerDecoded[25-24] == 19 and answerDecoded[26-24] == 2 and answerDecoded[27-24] == 0:
@@ -456,9 +454,6 @@ def main():
                 waitForSerial = False
             else:
                 print("<= received unknown")
-                print(answerRaw)
-                print("R:"+' '.join(format(x, '02x') for x in answerRaw))
-                print("D:"+' '.join(format(x, '02x') for x in answerDecoded))
 
 
             delta = timeStart + timedelta(seconds=1/cmds_per_second) - datetime.now()
