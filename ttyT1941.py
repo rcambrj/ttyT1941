@@ -389,8 +389,8 @@ def main():
 
             answerRaw     = port.read(64)
             answerDecoded = unmarshal(answerRaw)
-            print("R: "+' '.join(format(x, '02x') for x in answerRaw))
-            print("D: "+' '.join(format(x, '02x') for x in answerDecoded))
+            print("<= R: "+' '.join(format(x, '02x') for x in answerRaw))
+            print("<= D: "+' '.join(format(x, '02x') for x in answerDecoded))
 
 
             if len(answerDecoded) >= 23 and answerDecoded[24-24] == 0x03 and answerDecoded[25-24] == 19 and answerDecoded[26-24] == 2 and answerDecoded[27-24] == 0:
